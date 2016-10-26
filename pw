@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 invalid() {
     echo "See: pw $cmd --help"
@@ -134,7 +134,9 @@ set_command() {
 
 
 cmd="$1"
-shift 1
+if ! [ -z "$cmd" ]; then
+    shift 1
+fi
 
 case "$cmd" in
 
