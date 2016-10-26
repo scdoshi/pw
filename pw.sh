@@ -1,0 +1,163 @@
+#!/bin/sh
+
+invalid() {
+    echo "See: pw $cmd --help"
+    exit 1
+}
+
+del_command() {
+    # Help
+    if [ "$1" = "--help" -o "$1" = "-h" ]; then
+        echo "Delete an entry via id"
+        echo "Options:"
+        echo "-h / --help ... show this message"
+        exit 0
+    fi
+
+    # Delete
+    if [ -z "$1" ]; then
+        invalid
+    fi
+    gkeyring --unlock
+    gkeyring --delete --id $1
+    gkeyring --lock
+}
+
+find_command() {
+    # Help
+    if [ "$1" = "--help" -o "$1" = "-h" ]; then
+        echo "Grep for search term in id, key, username fields"
+        echo "Options:"
+        echo "-h / --help ... show this message"
+        echo "-s / --show ... show password"
+        exit 0
+    fi
+
+    # Validate arguments and options
+    show=""
+    query=""
+
+    for arg in "$@"; do
+        if [ ${arg:0:1} = "-" ]; then
+            if [ "$arg" = "-s" -o "$arg" = "--show" ]; then
+                show=1
+            else
+                echo "Invalid option: $arg"
+                invalid
+            fi
+        elif [ -z "$query" ]; then
+            query="$arg"
+        else
+            echo "Invalid argument: $arg."
+            invalid
+        fi
+    done
+
+    if [ -z "$query" ]; then
+        echo "Invalid arguments."
+        invalid
+    fi
+
+    # Find
+    gkeyring --unlock
+    if [ -z "$show" ]; then
+        gkeyring --all -o id,name,username | grep -i $query
+        echo $(gkeyring --all -o id,name,username,secret | grep -i $query) \
+            | cut -d" " -f4 | xclip -selection clipboard
+    else
+        gkeyring --all -o id,name,username,secret | grep -i $query
+    fi
+    gkeyring --lock
+}
+
+set_command() {
+    # Help
+    if [ "$1" = "--help" -o "$1" = "-h" ]; then
+        echo "Create new password entry"
+        echo "Options:"
+        echo "-h / --help     ... show this message"
+        echo "-g / --generate ... auto generate new password"
+        echo "-l / --length   ... length of auto generated password"
+        exit 0
+    fi
+
+    # Validate arguments and options
+    generate=""
+    length=""
+    key=""
+    username=""
+
+    for arg in "$@"; do
+        if [ ${arg:0:1} = "-" ]; then
+            if [ "$arg" = "-g" -o "$arg" = "--generate" ]; then
+                generate=1
+            elif [ "$arg" = "-l" -o "$arg" = "--length" ]; then
+                length="set"
+            else
+                echo "Invalid option: $arg"
+                invalid
+            fi
+        elif [ "$length" = "set" ]; then
+            length=$arg
+        elif [ -z "$key" ]; then
+            key="$arg"
+        elif [ -z "$username" ]; then
+            username="$arg"
+        else
+            echo "Invalid argument: $arg."
+            invalid
+        fi
+    done
+
+    if [ -z "$key" -o -z "$username" ]; then
+        echo "Invalid arguments."
+        invalid
+    fi
+
+    # Set
+    password=""
+    if [ -z "$generate" ]; then
+        echo "Enter password:"
+        read password
+    else
+        # Replace with native bash function
+        password=$(python -c 'import uuid; print(uuid.uuid4().hex)')
+        if ! [ -z "$length" ]; then
+            password=${password:0:length}
+        fi
+        echo "$password" | cut -d" " -f4 | xclip -selection clipboard
+    fi
+    gkeyring --unlock
+    gkeyring --set --name $key -p username=$username -w $password
+    gkeyring --lock
+}
+
+
+cmd="$1"
+shift 1
+
+case "$cmd" in
+
+    del)
+        del_command $@
+        ;;
+
+    find)
+        find_command $@
+        ;;
+
+    set)
+        set_command $@
+        ;;
+
+    *)
+        echo "Use as:"
+        echo "pw find <search_term>"
+        echo "pw find <search_term> --show"
+        echo "pw set <key> <username>"
+        echo "pw del <id>"
+        echo ""
+        echo "--help after any command to bring up help"
+        exit 1
+        ;;
+esac
