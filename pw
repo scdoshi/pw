@@ -62,8 +62,8 @@ find_command() {
     gkeyring --unlock
     if [ -z "$show" ]; then
         gkeyring --all -o id,name,username | grep -i $query
-        echo $(gkeyring --all -o id,name,username,secret | grep -i $query) \
-            | cut -d" " -f4 | xclip -selection clipboard
+        echo "$(gkeyring --all -o id,name,username,secret | grep -i $query)" \
+            | cut -f4 | xclip -selection clipboard
     else
         gkeyring --all -o id,name,username,secret | grep -i $query
     fi
