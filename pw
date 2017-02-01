@@ -18,9 +18,9 @@ del_command() {
     if [ -z "$1" ]; then
         invalid
     fi
-    gkeyring --unlock
-    gkeyring --delete --id $1
-    gkeyring --lock
+    gkeyring --unlock $KEYRING
+    gkeyring --delete --id $1 $KEYRING
+    gkeyring --lock $KEYRING
 }
 
 find_command() {
@@ -59,15 +59,15 @@ find_command() {
     fi
 
     # Find
-    gkeyring --unlock
+    gkeyring --unlock $KEYRING
     if [ -z "$show" ]; then
-        gkeyring --all -o id,name,username | grep -i $query
-        echo "$(gkeyring --all -o id,name,username,secret | grep -i $query)" \
+        gkeyring --all -o id,name,username $KEYRING | grep -i $query
+        echo "$(gkeyring --all -o id,name,username,secret $KEYRING | grep -i $query)" \
             | cut -f4 | xclip -selection clipboard
     else
-        gkeyring --all -o id,name,username,secret | grep -i $query
+        gkeyring --all -o id,name,username,secret $KEYRING | grep -i $query
     fi
-    gkeyring --lock
+    gkeyring --lock $KEYRING
 }
 
 set_command() {
@@ -127,11 +127,17 @@ set_command() {
         fi
         echo "$password" | cut -d" " -f4 | xclip -selection clipboard
     fi
-    gkeyring --unlock
-    gkeyring --set --name $key -p username=$username -w $password
-    gkeyring --lock
+    gkeyring --unlock $KEYRING
+    gkeyring --set --name $key -p username=$username -w $password $KEYRING
+    gkeyring --lock $KEYRING
 }
 
+source ~/.pwrc
+
+KEYRING=''
+if test "$PW_KEYRING" != ''; then
+    KEYRING="--keyring=$PW_KEYRING"
+fi
 
 cmd="$1"
 if ! [ -z "$cmd" ]; then
