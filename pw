@@ -139,6 +139,7 @@ generate_password() {
     if [ -z "$length" ]; then
         length=32
     fi
+    # TODO: Add validation checks for $length. Currently susceptible to evaluate anything.
     eval $__password="`base64 < /dev/urandom | head -c $length`"
 }
 
