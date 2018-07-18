@@ -82,10 +82,10 @@ set_command() {
     fi
 
     # Validate arguments and options
-    generate=""
-    length=""
-    key=""
-    username=""
+    local generate=""
+    local length=""
+    local key=""
+    local username=""
 
     for arg in "$@"; do
         if [ ${arg:0:1} = "-" ]; then
@@ -115,21 +115,37 @@ set_command() {
     fi
 
     # Set
-    password=""
+    local password=""
     if [ -z "$generate" ]; then
         echo "Enter password:"
         read password
     else
-        # Replace with native bash function
-        password=$(python -c 'import uuid; print(uuid.uuid4().hex)')
-        if ! [ -z "$length" ]; then
-            password=${password:0:length}
+        if [ -z "$length" ]; then
+            length=32
         fi
+        generate_password password $length
         echo "$password" | cut -d" " -f4 | xclip -selection clipboard
     fi
     gkeyring --unlock $KEYRING
     gkeyring --set --name $key -p username=$username -w $password $KEYRING
     gkeyring --lock $KEYRING
+}
+
+# $1: output, string, generated password
+# $2: optional, number, required length of password
+generate_password() {
+    local __password=$1
+    local length=$2
+    if [ -z "$length" ]; then
+        length=32
+    fi
+    eval $__password="`base64 < /dev/urandom | head -c $length`"
+}
+
+gen_command() {
+    local password
+    generate_password password $1
+    echo "$password"
 }
 
 source ~/.pwrc
@@ -156,6 +172,9 @@ case "$cmd" in
 
     set)
         set_command $@
+        ;;
+    gen)
+        gen_command $@
         ;;
 
     *)
